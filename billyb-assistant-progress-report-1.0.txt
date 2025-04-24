@@ -1,0 +1,93 @@
+BillyB Assistant Progress Report v1.0
+=====================================
+
+1. Project Initialization
+   - Created project directory: ~/billy-assistant
+
+2. Dependency Management
+   - requirements.txt with:
+     • nltk
+     • spacy
+     • tensorflow
+     • flask
+
+3. Docker Setup
+   - Dockerfile based on python:3.10-slim
+     • Installs Python libs and spaCy model
+     • Copies app code
+     • CMD → python main.py
+   - Local registry at localhost:5000 to host image
+
+4. Compose Configuration
+   - docker-compose.yml references image localhost:5000/billy-assistant:latest
+   - Volumes:
+     • ./data → /app/data
+   - Port mapping:
+     • Host 5001 → Container 5000
+
+5. Application Code
+   - main.py:
+     • Flask app exposing:
+       – GET/POST /profile for JSON user profile
+       – GET / → personalized greeting
+     • Data persisted under ./data/user_profile.json
+
+6. Build & Deployment
+   - Built image locally: docker build -t billy-assistant:latest .
+   - Pushed to registry: docker push localhost:5000/billy-assistant:latest
+   - Deployed via Portainer stack “billy-assistant”
+   - Verified endpoint at http://billyb:5001/
+     • Default greeting when no profile set
+     • Personalized greeting after POST to /profile
+
+7. Next Steps
+   - Add style-based response adaptation using profile “style” field
+
+Notes
+-----
+- Assistant base URL: http://billyb:5001
+- DNS .local not yet configured; using hostname directly.
+
+8. Style-Based Response Adaptation
+   - Implemented handling of 'style' in main.py (direct, formal, default).
+   - Rebuilt, tagged, pushed image; redeployed via Portainer.
+   - Verified style logic via curl tests.
+
+9. Ask Endpoint Stub
+   - Added /ask endpoint stub in main.py, echoing user questions.
+   - Rebuilt, tagged, pushed image; redeployed stack.
+   - Verified stub via curl.
+
+10. Ollama Integration (REST)
+   - # Removed local Ollama installation (decommissioned).
+   - Added 'requests' to requirements.txt.
+   - Updated docker-compose.yml to include Ollama service and GPU reservation.
+   - Updated main.py to call Ollama REST API for /ask.
+   - Rebuilt, tagged, pushed image; redeployed stack with Portainer.
+   - Verified /ask endpoint returns real AI responses from Ollama.
+
+
+# ----------------------------
+# Update: 2025-04-24
+# ----------------------------
+
+- Verified Docker-based assistant stack successfully runs Flask app on port 5001.
+- Verified Ollama container runs cleanly using latest `ollama/ollama:latest` (v0.6.6).
+- Detected breaking change: `/api/generate` and `/api/completions` are unavailable in current image (v0.6.6).
+- ✅ Containers communicate via internal DNS (`ollama:11434` resolves successfully).
+- ❌ Assistant `/ask` endpoint cannot complete due to missing supported API in containerized Ollama.
+- 🔒 **Paused development on `/ask` endpoint pending updated Ollama image with `/api/completions` support.**
+- Next steps will proceed with dummy handler to enable continued development/testing of other endpoints.
+
+# ----------------------------
+# Update: 2025-04-24
+# ----------------------------
+
+- Completed real-time DuckDuckGo search integration.
+- Verified functional /search endpoint with query fallback and formatting.
+- Optimized Docker build to cache requirements and speed up rebuilds.
+- ✅ Cache-tested rebuild pipeline confirmed working.
+- Beginning work on /admin routes and persistent query logging:
+  - /admin/status for uptime and config
+  - /admin/logs for recent activity
+  - Query logs saved to data/query_log.json

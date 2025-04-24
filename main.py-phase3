@@ -1,0 +1,96 @@
+from flask import Flask, request, jsonify
+import os, json, requests
+import config
+
+app = Flask(__name__)
+PROFILE_PATH = config.PROFILE_PATH
+OLLAMA_URL   = config.OLLAMA_URL
+DEFAULT_SEARCH_PROVIDER = config.DEFAULT_SEARCH_PROVIDER
+
+def load_profile():
+    try:
+        if os.path.exists(PROFILE_PATH):
+            with open(PROFILE_PATH) as f:
+                return json.load(f)
+    except:
+        return {}
+    return {}
+
+def get_greeting(profile):
+    name = profile.get('name')
+    style = profile.get('style','').lower()
+    if name:
+        if style == 'direct':
+            return f"{name}, what can I do for you?"
+        if style == 'formal':
+            return f"Good day, {name}. How may I assist you?"
+        return f"Hello {name}! How can I assist you today?"
+    return "Hello from BillyB! You can set your profile via POST to /profile."
+
+@app.route('/')
+def index():
+    return get_greeting(load_profile())
+
+@app.route('/profile', methods=['GET','POST'])
+def profile_route():
+    if request.method == 'POST':
+        data = request.json or {}
+        os.makedirs(os.path.dirname(PROFILE_PATH), exist_ok=True)
+        with open(PROFILE_PATH,'w') as f:
+            json.dump(data, f)
+        return jsonify(status="saved"),200
+    return jsonify(load_profile()),200
+
+@app.route('/ask', methods=['POST'])
+def ask():
+    q = (request.json or {}).get('question','').strip()
+    if not q:
+        return jsonify(error="No question provided"),400
+    try:
+        r = requests.post(OLLAMA_URL, json={"model":"llama3.2:latest","prompt":q,"stream":False}, timeout=60)
+        r.raise_for_status()
+        ans = r.json().get("completion","")
+        if not ans:
+            return jsonify(error="Empty response from Ollama"),502
+    except Exception as e:
+        return jsonify(error="Ollama API error", details=str(e)),500
+    return jsonify(response=ans),200
+
+def ddg_search(query):
+    r = requests.get("https://api.duckduckgo.com", params={"q":query,"format":"json","no_html":1})
+    r.raise_for_status()
+    d = r.json()
+    results = []
+    if d.get("AbstractText"):
+        results.append({"title":"Instant Answer","snippet":d["AbstractText"],"url":d.get("AbstractURL","")})
+    for topic in d.get("RelatedTopics",[]):
+        if topic.get("Text") and topic.get("FirstURL"):
+            results.append({"title":topic["Text"].split(" - ")[0],"snippet":topic["Text"],"url":topic["FirstURL"]})
+        elif topic.get("Topics"):
+            for sub in topic["Topics"]:
+                if sub.get("Text") and sub.get("FirstURL"):
+                    results.append({"title":sub["Text"].split(" - ")[0],"snippet":sub["Text"],"url":sub["FirstURL"]})
+    if not results:
+        results = [{"title":"","snippet":"No results found.","url":""}]
+    return results
+
+SEARCH_PROVIDERS = {"duckduckgo": ddg_search}
+
+@app.route('/search', methods=['POST'])
+def search():
+    body = request.json or {}
+    q = body.get('query','').strip()
+    if not q:
+        return jsonify(error="No query provided"),400
+    prov = body.get('provider', DEFAULT_SEARCH_PROVIDER).lower().strip()
+    if prov not in SEARCH_PROVIDERS:
+        return jsonify(error=f"Unknown provider '{prov}'"),400
+    try:
+        res = SEARCH_PROVIDERS[prov](q)
+    except Exception as e:
+        return jsonify(error="Search error", details=str(e)),500
+    return jsonify(provider=prov, results=res),200
+
+if __name__ == '__main__':
+    # Listen on container port 5000
+    app.run(host='0.0.0.0', port=5000)

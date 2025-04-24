@@ -1,0 +1,38 @@
+# Assistant Project Plan
+
+## ✅ Phase 1: Core Assistant Setup
+- [x] Flask API created with `/`, `/ask`, `/search`, and `/profile` routes
+- [x] Config and environment handling with fallback
+- [x] Integration with Ollama via subprocess
+- [x] /profile responds with greeting and stored info
+- [x] /search endpoint stub created
+
+## ✅ Phase 2: Backend Service Integration
+- [x] Dockerized assistant and Ollama with isolated services
+- [x] Port and bridge networking verified (5001 for Flask, 11434 for Ollama)
+- [x] Local Ollama removed; containers communicate over Docker network
+- [x] DNS resolution between containers working
+- [x] Assistant `/ask` sends requests to Ollama container
+
+🔒 **/ask Integration Paused**
+⚠️ Containerized Ollama (v0.6.6) does not expose `/api/generate` or `/api/completions`.
+→ Will resume `/ask` integration once new image is released or built manually.
+
+## ✅ Phase 3: Feature Expansion (in progress)
+- [x] Implement fallback dummy handler for `/ask`
+- [x] Expand `/search` with real-time DuckDuckGo results
+- [ ] Add alternate providers (Bing, SerpAPI)
+- [ ] Local profile memory and structured roles
+
+## 🔄 Phase 3.1: Admin + Logs (active)
+- [ ] `/admin/status` with uptime, profile, config
+- [ ] `/admin/logs` to return recent activity
+- [ ] Save all `/ask` and `/search` logs to `data/query_log.json` (last 50)
+
+## ⏩ Phase 4: Admin & Profile Tools
+- [ ] Persistent user memory volume
+- [ ] Editable system personality / toggles
+
+## ⏭️ Phase 5: Voice Capabilities (moved to end)
+- [ ] Whisper/STT integration
+- [ ] Audio prompts + TTS responses

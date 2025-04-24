@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  assistant:
+    image: localhost:5000/billy-assistant:latest
+    container_name: billy_assistant
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    environment:
+      PROFILE_PATH: data/user_profile.json
+      OLLAMA_URL: http://ollama:11434/api/generate
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  ollama-data:
