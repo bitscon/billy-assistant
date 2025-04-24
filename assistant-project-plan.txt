@@ -1,38 +1,45 @@
-# Assistant Project Plan
+# Billy Assistant — Project Plan
 
-## ✅ Phase 1: Core Assistant Setup
-- [x] Flask API created with `/`, `/ask`, `/search`, and `/profile` routes
-- [x] Config and environment handling with fallback
-- [x] Integration with Ollama via subprocess
-- [x] /profile responds with greeting and stored info
-- [x] /search endpoint stub created
+## ✅ MVP (v1.0) — Completed
+- [x] Create Flask-based assistant with /ask endpoint (fallback mode enabled)
+- [x] Integrate DuckDuckGo search via /search
+- [x] Add /summarize endpoint to condense search results
+- [x] Add /profile endpoints (role, tone, favorites)
+- [x] Add /admin endpoints (status, logs)
+- [x] Persist user profile to JSON file
+- [x] Create Dockerfile and docker-compose setup
+- [x] Serve via Portainer and internal registry
+- [x] Add basic README, project plan, progress tracker
+- [x] Setup GitHub repo and push with version tag v1.0
 
-## ✅ Phase 2: Backend Service Integration
-- [x] Dockerized assistant and Ollama with isolated services
-- [x] Port and bridge networking verified (5001 for Flask, 11434 for Ollama)
-- [x] Local Ollama removed; containers communicate over Docker network
-- [x] DNS resolution between containers working
-- [x] Assistant `/ask` sends requests to Ollama container
+---
 
-🔒 **/ask Integration Paused**
-⚠️ Containerized Ollama (v0.6.6) does not expose `/api/generate` or `/api/completions`.
-→ Will resume `/ask` integration once new image is released or built manually.
+## ⏸ Paused Feature (pending Ollama image fix)
+- [ ] Full LLM-powered `/ask` endpoint using Ollama (`/api/completions`)
+  - Blocked until official Docker image is available
 
-## ✅ Phase 3: Feature Expansion (in progress)
-- [x] Implement fallback dummy handler for `/ask`
-- [x] Expand `/search` with real-time DuckDuckGo results
-- [ ] Add alternate providers (Bing, SerpAPI)
-- [ ] Local profile memory and structured roles
+---
 
-## 🔄 Phase 3.1: Admin + Logs (active)
-- [ ] `/admin/status` with uptime, profile, config
-- [ ] `/admin/logs` to return recent activity
-- [ ] Save all `/ask` and `/search` logs to `data/query_log.json` (last 50)
+## 🔄 Active Development
+- [ ] GitHub integration for CI/CD (optional GitHub Actions)
+- [ ] Modularize code structure (split main.py into routes/modules)
+- [ ] Admin dashboard (React + Tailwind, optional)
+- [ ] Markdown-based prompt library (self-hosted)
+- [ ] Expand web search: Add Bing + Brave as providers
+- [ ] Add vector embedding + knowledge retrieval (local docs)
+- [ ] Optional browser extension for rapid queries
 
-## ⏩ Phase 4: Admin & Profile Tools
-- [ ] Persistent user memory volume
-- [ ] Editable system personality / toggles
+---
 
-## ⏭️ Phase 5: Voice Capabilities (moved to end)
-- [ ] Whisper/STT integration
-- [ ] Audio prompts + TTS responses
+## 📦 Upcoming Ideas
+- [ ] Telegram / Discord integration
+- [ ] Voice input/output support (moved to end of roadmap)
+- [ ] Scheduled automations (n8n, cron, or server triggers)
+- [ ] Local-only "airplane mode" for offline inference
+- [ ] Role presets / selectable personalities
+
+---
+
+## 🏁 Current Version
+v1.0 — MVP deployed and functional with fallback AI, search, and local memory.
+
