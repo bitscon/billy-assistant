@@ -1,5 +1,11 @@
-venv/
+# Python
 __pycache__/
 *.pyc
+
+# Docker
+*.env
 data/
-.env
+*.log
+
+# System
+.DS_Store
