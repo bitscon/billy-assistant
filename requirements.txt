@@ -1,5 +1,7 @@
+flask
+requests
 nltk
 spacy
 tensorflow
-flask
-requests
+duckduckgo-search
+qdrant-client
