@@ -46,3 +46,4 @@ This is just the beginning — your assistant should reflect *you*.
 cd ~/Projects/billy-assistant
 ./push_to_prod.sh
 
+# Test commit
