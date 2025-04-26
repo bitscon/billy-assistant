@@ -1,57 +1,66 @@
 #!/bin/bash
+set -e
 
 echo "=== 🚀 Billy Alive Script ==="
+cd ~/Projects/billy-assistant
 echo "📂 At: $(pwd)"
 
-# 1. Confirm SSH connectivity to GitHub
-echo "🔒 Checking SSH connection to GitHub..."
-if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
-    echo "✅ SSH to GitHub OK."
-else
-    echo "❌ SSH connection failed! Please fix SSH keys first."
-    exit 1
-fi
-
-# 2. Git add, commit, push
-echo
-read -p "📝 Enter your commit message: " commit_message
+# Git commit
+echo -n "📝 Enter your commit message: "
+read commit_msg
 git add .
-git commit -m "$commit_message"
+git commit -m "$commit_msg"
 git push
 
 echo "✅ Code pushed to GitHub."
 
-# 3. SSH into AI server and pull, rebuild, push Docker
+# SSH into AI server and rebuild
 echo "🔒 SSH into ai server..."
-ssh billybs@ai << 'EOC'
+ssh billybs@ai << 'EOSSH'
   cd ~/billy-assistant
   echo "📂 Pulling latest code..."
-  git pull origin main
-
+  git pull origin main || echo "⚠️ Git pull failed, continuing..."
   echo "🐳 Rebuilding Docker image..."
   docker build -t localhost:5000/billy-assistant:latest .
-  
   echo "🚀 Pushing to local registry..."
   docker push localhost:5000/billy-assistant:latest
-  
-  echo "✅ AI server done. You can update Portainer now!"
-EOC
+EOSSH
 
-# 4. Local Post-check: Verify endpoints
-echo
+echo "✅ AI server done. You can update Portainer now!"
+
+# Quick verification
+echo ""
 echo "🔍 Verifying assistant endpoints..."
-ASK=$(curl -s -X POST http://ai:5001/ask -H "Content-Type: application/json" -d '{"question":"ping"}' | jq '.response' || echo "Fail")
-SEARCH=$(curl -s -X POST http://ai:5001/search -H "Content-Type: application/json" -d '{"query":"ping"}' | jq '.provider' || echo "Fail")
-SUMMARY=$(curl -s -X POST http://ai:5001/summarize -H "Content-Type: application/json" -d '{"query":"ping"}' | jq '.summary' || echo "Fail")
-STATUS=$(curl -s http://ai:5001/admin/status | jq '.status' || echo "Fail")
-ROLE=$(curl -s http://ai:5001/profile/role | jq '.role' || echo "Fail")
+for endpoint in ask search summarize admin/status profile/role; do
+    if [[ "$endpoint" == "ask" ]]; then
+        payload='{"question":"ping"}'
+        result=$(curl -s -X POST http://ai:5001/ask -H "Content-Type: application/json" -d "$payload" || echo "failed")
+    elif [[ "$endpoint" == "search" ]]; then
+        payload='{"query":"test"}'
+        result=$(curl -s -X POST http://ai:5001/search -H "Content-Type: application/json" -d "$payload" || echo "failed")
+    elif [[ "$endpoint" == "summarize" ]]; then
+        payload='{"query":"testing summarize"}'
+        result=$(curl -s -X POST http://ai:5001/summarize -H "Content-Type: application/json" -d "$payload" || echo "failed")
+    else
+        result=$(curl -s http://ai:5001/$endpoint || echo "failed")
+    fi
+    echo "- Checking /$endpoint... \"$(echo $result | cut -c1-30)...\""
+done
 
-echo "- Checking /ask... $ASK"
-echo "- Checking /search... $SEARCH"
-echo "- Checking /summarize... $SUMMARY"
-echo "- Checking /admin/status... $STATUS"
-echo "- Checking /profile/role... $ROLE"
-
-echo
+echo ""
 echo "🎉 All steps done. Billy is ALIVE and operational!"
 echo "📦 Please update the stack in Portainer manually to complete deployment!"
+
+# 🎯 Final "Done!" and sound
+echo ""
+echo "🎯 Done! You can safely close this window or run another command."
+
+if command -v paplay &> /dev/null; then
+    paplay /usr/share/sounds/freedesktop/stereo/complete.oga &
+elif command -v aplay &> /dev/null; then
+    aplay /usr/share/sounds/alsa/Front_Center.wav &
+else
+    echo "🔇 No sound player found, skipping sound."
+fi
+
+exit 0
