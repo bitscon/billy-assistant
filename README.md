@@ -37,3 +37,12 @@ This is just the beginning — your assistant should reflect *you*.
 
 **Chad McCormack**  
 🧪 Innovating tech, automating everything, refusing to be boring.
+
+## 🚀 Push to Production Options
+
+### 1. Regular Push
+
+```bash
+cd ~/Projects/billy-assistant
+./push_to_prod.sh
+
