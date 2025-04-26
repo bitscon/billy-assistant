@@ -1,55 +1,57 @@
 #!/bin/bash
 
 echo "=== 🚀 Billy Alive Script ==="
-
-# Step 1: Git commit + push
 echo "📂 At: $(pwd)"
-echo -n "📝 Enter your commit message: "
-read commit_message
 
+# 1. Confirm SSH connectivity to GitHub
+echo "🔒 Checking SSH connection to GitHub..."
+if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+    echo "✅ SSH to GitHub OK."
+else
+    echo "❌ SSH connection failed! Please fix SSH keys first."
+    exit 1
+fi
+
+# 2. Git add, commit, push
+echo
+read -p "📝 Enter your commit message: " commit_message
 git add .
 git commit -m "$commit_message"
 git push
 
 echo "✅ Code pushed to GitHub."
 
-# Step 2: SSH into server
+# 3. SSH into AI server and pull, rebuild, push Docker
 echo "🔒 SSH into ai server..."
-ssh billybs@ai << 'EOSSH'
-  echo "📂 Pulling latest code..."
+ssh billybs@ai << 'EOC'
   cd ~/billy-assistant
+  echo "📂 Pulling latest code..."
   git pull origin main
 
   echo "🐳 Rebuilding Docker image..."
   docker build -t localhost:5000/billy-assistant:latest .
-
+  
   echo "🚀 Pushing to local registry..."
   docker push localhost:5000/billy-assistant:latest
-EOSSH
+  
+  echo "✅ AI server done. You can update Portainer now!"
+EOC
 
-# Step 3: Remind about Portainer
-echo ""
-echo "📦 Please open Portainer and update the billy-assistant stack manually!"
-echo ""
-
-# Step 4: Quick API Health Checks
+# 4. Local Post-check: Verify endpoints
+echo
 echo "🔍 Verifying assistant endpoints..."
-base_url="http://ai:5001"
+ASK=$(curl -s -X POST http://ai:5001/ask -H "Content-Type: application/json" -d '{"question":"ping"}' | jq '.response' || echo "Fail")
+SEARCH=$(curl -s -X POST http://ai:5001/search -H "Content-Type: application/json" -d '{"query":"ping"}' | jq '.provider' || echo "Fail")
+SUMMARY=$(curl -s -X POST http://ai:5001/summarize -H "Content-Type: application/json" -d '{"query":"ping"}' | jq '.summary' || echo "Fail")
+STATUS=$(curl -s http://ai:5001/admin/status | jq '.status' || echo "Fail")
+ROLE=$(curl -s http://ai:5001/profile/role | jq '.role' || echo "Fail")
 
-echo "- Checking /ask..."
-curl -s -X POST "$base_url/ask" -H "Content-Type: application/json" -d '{"question":"ping"}' | jq '.response' || echo "❌ /ask failed"
+echo "- Checking /ask... $ASK"
+echo "- Checking /search... $SEARCH"
+echo "- Checking /summarize... $SUMMARY"
+echo "- Checking /admin/status... $STATUS"
+echo "- Checking /profile/role... $ROLE"
 
-echo "- Checking /search..."
-curl -s -X POST "$base_url/search" -H "Content-Type: application/json" -d '{"query":"test"}' | jq '.provider' || echo "❌ /search failed"
-
-echo "- Checking /summarize..."
-curl -s -X POST "$base_url/summarize" -H "Content-Type: application/json" -d '{"query":"test"}' | jq '.summary' || echo "❌ /summarize failed"
-
-echo "- Checking /admin/status..."
-curl -s "$base_url/admin/status" | jq '.status' || echo "❌ /admin/status failed"
-
-echo "- Checking /profile/role..."
-curl -s "$base_url/profile/role" | jq '.role' || echo "❌ /profile/role failed"
-
-echo ""
+echo
 echo "🎉 All steps done. Billy is ALIVE and operational!"
+echo "📦 Please update the stack in Portainer manually to complete deployment!"
