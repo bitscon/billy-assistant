@@ -1,48 +1,60 @@
-# Billy Assistant — Project Plan
-
-## ✅ MVP (v1.0) — Completed
-- [x] Create Flask-based assistant with /ask endpoint (fallback mode enabled)
-- [x] Integrate DuckDuckGo search via /search
-- [x] Add /summarize endpoint to condense search results
-- [x] Add /profile endpoints (role, tone, favorites)
-- [x] Add /admin endpoints (status, logs)
-- [x] Persist user profile to JSON file
-- [x] Create Dockerfile and docker-compose setup
-- [x] Serve via Portainer and internal registry
-- [x] Add basic README, project plan, progress tracker
-- [x] Setup GitHub repo and push with version tag v1.0
+# 🧠 Billy Assistant — Project Plan (v1.0)
 
 ---
 
-## ⏸ Paused Feature (pending Ollama image fix)
-- [ ] Full LLM-powered `/ask` endpoint using Ollama (`/api/completions`)
-  - Blocked until official Docker image is available
+## ✅ Completed Milestones
+
+- Set up GitHub repository
+- Setup SSH keys for GitHub and AI server
+- Dockerized billy-assistant using Docker Compose
+- Created `push_to_prod_and_open.sh` script (merged into `billy_alive.sh`)
+- Created `end_of_day.sh` script for safe end-of-day updates
+- Created `billy_alive.sh` master workflow for GitHub ➔ AI server ➔ Docker build ➔ Portainer update
+- Created README.md to document workflows
+- Installed CLI tools (gh, ssh, docker-cli) on laptop
+- Verified all API endpoints working:
+  - `/`
+  - `/ask`
+  - `/search`
+  - `/summarize`
+  - `/admin/status`
+  - `/profile/role`
+- Moved development from billyb server to laptop for safe practice
+- Configured server renaming from billyb ➔ ai
+- Proper GitHub SSH authentication for faster pushing
+- Daily scripts automate 95% of development operations
 
 ---
 
-## 🔄 Active Development
-- [ ] GitHub integration for CI/CD (optional GitHub Actions)
-- [ ] Modularize code structure (split main.py into routes/modules)
-- [ ] Admin dashboard (React + Tailwind, optional)
-- [ ] Markdown-based prompt library (self-hosted)
-- [ ] Expand web search: Add Bing + Brave as providers
-- [ ] Add vector embedding + knowledge retrieval (local docs)
-- [ ] Optional browser extension for rapid queries
+## 📋 Current MVP Status
+
+| Feature             | Status      | Notes                        |
+|---------------------|-------------|-------------------------------|
+| Assistant API Core  | ✅ Working    | Echo fallback active         |
+| Search Integration  | ✅ Working    | DuckDuckGo only (for now)     |
+| Summarization       | ✅ Working    | DuckDuckGo basic source       |
+| Admin Endpoints     | ✅ Working    | /status, /logs, etc.          |
+| Profile Management  | ✅ Working    | Favorites, Roles             |
+| Ollama LLM Support  | ⏸️ Paused     | Waiting for Docker update    |
 
 ---
 
-## 📦 Upcoming Ideas
-- [ ] Telegram / Discord integration
-- [ ] Voice input/output support (moved to end of roadmap)
-- [ ] Scheduled automations (n8n, cron, or server triggers)
-- [ ] Local-only "airplane mode" for offline inference
-- [ ] Role presets / selectable personalities
+## 🛠️ Immediate Next Steps
+
+- Add live domain routing when `bitsnbytes.lol` is ready
+- Upgrade Ollama connection when `/api/completions` becomes available
+- Create client-side simple web UI for asking/searching
+- Implement backup automation for Docker volumes
+- Monitor server uptime and failures automatically
 
 ---
 
-## 🏁 Current Version
-v1.0 — MVP deployed and functional with fallback AI, search, and local memory.
+## ⏸️ Paused Items
 
-# Last updated: 2025-04-24 18:36:46
-# Last updated: 2025-04-24 18:36:59
-# Last updated: 2025-04-24 18:58:34
+- 🛑 Ollama LLM true integration (waiting on their Docker update)
+- 🛑 Final SSL certs and domain routing (`ai.bitsnbytes.lol`)
+
+---
+
+# 🎯 Master Status: Billy is online, stable, and in daily development mode.
+
