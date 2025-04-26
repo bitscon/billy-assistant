@@ -1,36 +1,38 @@
 #!/bin/bash
-set -e
 
 echo "=== 🛠️ Billy Assistant: Push to Production + Open Portainer ==="
 
-# Step 1: Local commit
-cd ~/Projects/billy-assistant
+# Show current project directory
 echo "📂 At: $(pwd)"
+
+# Prompt for commit message
+echo -n "📝 Please enter a commit message: "
+read commit_message
+
+# Git add, commit, and push
 git add .
-echo "📝 Please enter a commit message: "
-read commit_msg
-git commit -m "$commit_msg"
-git push origin main
+git commit -m "$commit_message"
+git push
+
 echo "✅ Code pushed to GitHub."
 
-# Step 2: SSH into server and rebuild
+# SSH into billy server (ai)
 echo "🔒 SSH into billy server (ai)..."
 ssh billybs@ai << 'EOSSH'
-  set -e
   echo "📂 Pulling latest code..."
   cd ~/billy-assistant
   git pull origin main
 
-  echo "🐳 Building Docker image..."
+  echo "🐳 Rebuilding Docker image..."
   docker build -t localhost:5000/billy-assistant:latest .
 
-  echo "📦 Pushing image to local registry..."
+  echo "🚀 Pushing to local registry..."
   docker push localhost:5000/billy-assistant:latest
-
-  echo "🚀 Finished server-side."
 EOSSH
 
-echo "🌐 Opening Portainer in browser..."
-firefox http://ai:9000 &
+echo ""
+echo "📚 Tip: If SSH asks for trust (first time), just type 'yes' to accept the server fingerprint!"
+echo ""
 
-echo "✅ Done! Portainer is opening. Update the stack there!"
+echo "📦 Now open Portainer and update the stack manually."
+echo "✅ Done! Billy is deployed."
