@@ -1,49 +1,26 @@
-# 🤖 BillyB Assistant
+# 🧠 Billy Assistant
 
-BillyB is a Dockerized, Flask-based personal assistant with modular endpoints for search, summarization, AI responses, and profile memory.
+Billy is a personal assistant server, self-hosted with Docker, Flask, DuckDuckGo search, and Qdrant memory storage.
 
-## 🔧 Features
+---
+## 🚀 Quick Commands
 
-- Modular `/ask`, `/search`, `/summarize` endpoints
-- Memory via JSON-stored user profiles
-- DuckDuckGo-based fallback search
-- Flask REST API with `/admin/*` controls
-- Docker + Portainer deployable
-- End-of-day dev sync script
+| Action | Command |
+|:------:|:-------:|
+| Push code to production + verify | `./billy_alive.sh` |
+| End of day push + notes | `./end_of_day.sh` |
 
-## 📂 Project Files
+---
+## 📚 Documentation
 
-- `main.py` – Core Flask app
-- `Dockerfile` – Builds the assistant container
-- `docker-compose.yml` – Defines the assistant + Ollama services
-- `assistant-project-plan.txt` – Master roadmap
-- `billyb-assistant-progress-report-1.0.txt` – Daily progress tracker
+- [Memory System](docs/memory.md)
+- [Architecture Overview](docs/architecture.md)
+- [Deployment Guide](docs/deployment.md)
 
-## 💡 Ideas & Future Plans
+---
+## 🛠️ Stacks
 
-We track upcoming ideas, integrations, and creative features in the [`ideas/`](./ideas/) directory.
-
-Explore:
-- [`features.md`](./ideas/features.md) – Core roadmap features
-- [`integrations.md`](./ideas/integrations.md) – Third-party tools to integrate
-- [`fun-stuff.md`](./ideas/fun-stuff.md) – Personality modes and easter eggs
-
-## 🧠 Get Involved
-
-Feel free to fork, submit issues, or suggest ideas.  
-This is just the beginning — your assistant should reflect *you*.
-
-## 🛠️ Author
-
-**Chad McCormack**  
-🧪 Innovating tech, automating everything, refusing to be boring.
-
-## 🚀 Push to Production Options
-
-### 1. Regular Push
-
-```bash
-cd ~/Projects/billy-assistant
-./push_to_prod.sh
-
-# Test commit
+| Stack | Purpose |
+|:-----:|:-------:|
+| `billy-assistant` | Core Assistant API and Logic |
+| `billy-memory`    | Vector DB (Qdrant) for Memory Storage |

@@ -1,60 +1,47 @@
-# 🧠 Billy Assistant — Project Plan (v1.0)
+# 🧠 Billy Assistant — Project Plan
+
+## Overall Goal
+Create a self-hosted, dynamic, learning assistant that can:
+- Store and retrieve persistent memory
+- Accept corrections and evolve over time
+- Handle real-world documents, links, and instructions
+- Build future AI tools alongside Chad
 
 ---
 
-## ✅ Completed Milestones
+## Phase 1 — Infrastructure Foundation
 
-- Set up GitHub repository
-- Setup SSH keys for GitHub and AI server
-- Dockerized billy-assistant using Docker Compose
-- Created `push_to_prod_and_open.sh` script (merged into `billy_alive.sh`)
-- Created `end_of_day.sh` script for safe end-of-day updates
-- Created `billy_alive.sh` master workflow for GitHub ➔ AI server ➔ Docker build ➔ Portainer update
-- Created README.md to document workflows
-- Installed CLI tools (gh, ssh, docker-cli) on laptop
-- Verified all API endpoints working:
-  - `/`
-  - `/ask`
-  - `/search`
-  - `/summarize`
-  - `/admin/status`
-  - `/profile/role`
-- Moved development from billyb server to laptop for safe practice
-- Configured server renaming from billyb ➔ ai
-- Proper GitHub SSH authentication for faster pushing
-- Daily scripts automate 95% of development operations
+✅ Modular, extensible architecture  
+✅ Vector memory with semantic search  
+✅ Local, open-source LLM (LLaMA 2 or similar)  
+✅ Core orchestrator loop (retrieve + generate)  
+✅ Self-hosted, private deployment
 
 ---
 
-## 📋 Current MVP Status
-
-| Feature             | Status      | Notes                        |
-|---------------------|-------------|-------------------------------|
-| Assistant API Core  | ✅ Working    | Echo fallback active         |
-| Search Integration  | ✅ Working    | DuckDuckGo only (for now)     |
-| Summarization       | ✅ Working    | DuckDuckGo basic source       |
-| Admin Endpoints     | ✅ Working    | /status, /logs, etc.          |
-| Profile Management  | ✅ Working    | Favorites, Roles             |
-| Ollama LLM Support  | ⏸️ Paused     | Waiting for Docker update    |
+## Current Focus
+- Deploy vector database (Qdrant)
+- Set up LLM inference (LLaMA 2 or open model)
+- Build simple orchestrator (Python + LangChain)
+- Enable storing and retrieving information
+- Enable user to correct memory manually
 
 ---
 
-## 🛠️ Immediate Next Steps
-
-- Add live domain routing when `bitsnbytes.lol` is ready
-- Upgrade Ollama connection when `/api/completions` becomes available
-- Create client-side simple web UI for asking/searching
-- Implement backup automation for Docker volumes
-- Monitor server uptime and failures automatically
-
----
-
-## ⏸️ Paused Items
-
-- 🛑 Ollama LLM true integration (waiting on their Docker update)
-- 🛑 Final SSL certs and domain routing (`ai.bitsnbytes.lol`)
+## Tool Choices
+| Component         | Choice                        |
+|-------------------|-------------------------------|
+| LLM (Brain)       | LLaMA 2 13B Chat or similar    |
+| Vector DB (Memory) | Qdrant                        |
+| Embeddings Model  | SentenceTransformers SBERT    |
+| Orchestrator      | Python + LangChain             |
+| Containers        | Docker Compose                |
 
 ---
 
-# 🎯 Master Status: Billy is online, stable, and in daily development mode.
-
+## Long-Term Vision
+- Steerable learning (editable knowledge)
+- Real-time context retrieval
+- Plugins for tools (browsing, coding, scheduling)
+- Voice control (future phase)
+- Fine-tuning and self-training
