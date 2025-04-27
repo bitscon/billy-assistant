@@ -1,7 +1,3 @@
-flask
+Flask
 requests
-nltk
-spacy
-tensorflow
-duckduckgo-search
 qdrant-client

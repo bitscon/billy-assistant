@@ -1,51 +1,47 @@
 import os
+import random
 import time
-import requests
-import numpy as np
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct, VectorParams, Distance
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+COLLECTION_NAME = "billy_memories"
 
-COLLECTION_NAME = "billy_memory"
+# Connect to Qdrant
+qdrant = QdrantClient(url=QDRANT_URL)
 
-def embed_text(text, dim=384):
-    np.random.seed(abs(hash(text)) % (2**32))
-    return np.random.uniform(-1, 1, size=dim).tolist()
+# Ensure collection exists
+def ensure_collection():
+    if COLLECTION_NAME not in [c.name for c in qdrant.get_collections().collections]:
+        qdrant.recreate_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=64, distance=Distance.COSINE),
+        )
 
-def create_collection():
-    url = f"{QDRANT_URL}/collections/{COLLECTION_NAME}"
-    payload = {
-        "vectors": {
-            "size": 384,
-            "distance": "Cosine"
-        }
-    }
-    requests.put(url, json=payload)
+# Embed text (fake embedder for now)
+def embed(text):
+    return [random.random() for _ in range(64)]
 
+# Save memory
 def save_memory(text):
-    vector = embed_text(text)
-    url = f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points"
-    payload = {
-        "points": [
-            {
-                "id": int(time.time() * 1000),
-                "vector": vector,
-                "payload": {
-                    "text": text
-                }
-            }
-        ]
-    }
-    requests.put(url, json=payload)
+    ensure_collection()
+    vector = embed(text)
+    point = PointStruct(
+        id=int(time.time() * 1000),
+        vector=vector,
+        payload={"text": text}
+    )
+    qdrant.upsert(collection_name=COLLECTION_NAME, points=[point])
+    return True
 
-def search_memory(query_text):
-    vector = embed_text(query_text)
-    url = f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search"
-    payload = {
-        "vector": vector,
-        "limit": 5,
-        "with_payload": True
-    }
-    res = requests.post(url, json=payload)
-    if res.status_code == 200:
-        return res.json().get("result", [])
-    return []
+# Search memory
+def search_memory(query):
+    ensure_collection()
+    vector = embed(query)
+    hits = qdrant.search(
+        collection_name=COLLECTION_NAME,
+        query_vector=vector,
+        limit=5,
+        with_payload=True
+    )
+    return [hit.payload for hit in hits]
