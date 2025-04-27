@@ -19,7 +19,7 @@ echo "✅ Code pushed to GitHub."
 echo "🔒 SSH into $REMOTE_HOST and redeploying..."
 $SSH bash << "EOSSH"
   set -euo pipefail
-  cd ~/Projects/billy-assistant
+  cd ~/billy-assistant
   git fetch origin
   git reset --hard origin/main
 
