@@ -1,29 +1,61 @@
 #!/bin/bash
+set -e
+
 echo "=== 🚀 Billy Alive Script ==="
-cd ~/Projects/billy-assistant || { echo "❌ Project folder not found"; exit 1; }
+echo "📂 At: $(pwd)"
 
-read -p "📝 Enter your commit message: " message
+# Commit Code
+echo "📝 Enter your commit message: "
+read commit_message
 git add .
-git commit -m "$message"
+git commit -m "$commit_message"
 git push
+echo "✅ Code pushed to GitHub."
 
-ssh ai << 'EOSSH'
-cd ~/billy-assistant || { echo "❌ Server project folder not found"; exit 1; }
-git pull origin main
-docker build -t localhost:5000/billy-assistant:latest .
-docker push localhost:5000/billy-assistant:latest
-EOSSH
+# SSH into AI server
+echo "🔒 SSH into ai server..."
+ssh billybs@ai << 'INNER_SSH'
+  set -e
+  cd ~/billy-assistant
 
-echo "✅ AI server done. You can update Portainer now!"
+  echo "📂 Pulling latest code..."
+  git pull
 
-# Local test endpoints
+  echo "🐳 Rebuilding Docker image..."
+  docker build -t localhost:5000/billy-assistant:latest . || { echo "❌ Docker build failed."; exit 1; }
+  
+  echo "🚀 Pushing to local registry..."
+  docker push localhost:5000/billy-assistant:latest || { echo "❌ Docker push failed."; exit 1; }
+
+  echo "✅ AI server done. You can update Portainer now!"
+INNER_SSH
+
+# Remind to update
+echo "📦 Please update the stack(s) in Portainer manually to complete deployment!"
+
+# Health check
 echo "🔍 Verifying assistant endpoints..."
-endpoints=(/ask /search /summarize /admin/status /profile/role)
-for ep in "${endpoints[@]}"; do
-    echo -n "- Checking $ep... "
-    curl -s http://ai:5001$ep | head -c 100
-    echo
-done
+
+check_url() {
+  url=$1
+  expect=$2
+  result=$(curl -s --max-time 5 "$url")
+  if echo "$result" | grep -qi "$expect"; then
+    echo "- Checking $url... OK"
+  else
+    echo "- Checking $url... ❌ Unexpected response!"
+  fi
+}
+
+check_url "http://ai:5001/" "Good day"
+check_url "http://ai:5001/memory/save" "Missing text"
+check_url "http://ai:5001/memory/search" "Missing query"
+
+# Celebration sound (optional)
+echo -e "\a"
+sleep 0.5
+echo -e "\a"
+sleep 0.5
+echo -e "\a"
 
 echo "🎉 All steps done. Billy is ALIVE and operational!"
-echo "📦 Please update the stack(s) in Portainer manually to complete deployment!"
