@@ -5,34 +5,58 @@ import requests
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
+
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+COLLECTION_NAME = "billy_memories"
+
+def ensure_collection():
+    """Create the collection if it doesn't exist yet"""
+    res = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
+    if res.status_code == 404:
+        schema = {
+            "vectors": {
+                "size": 64,
+                "distance": "Cosine"
+            }
+        }
+        create = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 64})
+        return create.ok
+    return True
 
 def embed_text(text):
+    """Temporary embedder: Random vector"""
     return [random.random() for _ in range(64)]
 
 def save_memory(text):
+    ensure_collection()
     vector = embed_text(text)
     payload = {"text": text}
     doc = {
-        "vectors": vector,
+        "vector": vector,
         "payload": payload,
         "id": int(time.time() * 1000)
     }
-    res = requests.put(f"{qdrant_url}/collections/billy_memories/points", json={"points": [doc]})
+    res = requests.put(
+        f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points",
+        json={"points": [doc]}
+    )
     return res.ok
 
 def search_memory(query):
+    """Search by text match + return top results"""
     try:
-        res = requests.post(f"{qdrant_url}/collections/billy_memories/points/scroll", json={"limit": 50})
-        data = res.json()
-        if not isinstance(data, dict):
-            return {"error": "Invalid response from Qdrant"}
-        memories = data.get("result", [])
+        ensure_collection()
+        res = requests.post(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
+            json={"limit": 50}
+        )
+        points = res.json().get("result", [])
         matches = []
-        for memory in memories:
-            if query.lower() in memory.get("payload", {}).get("text", "").lower():
-                matches.append(memory.get("payload", {}))
-        return matches
+        for point in points:
+            text = point.get("payload", {}).get("text", "")
+            if query.lower() in text.lower():
+                matches.append(text)
+        return matches[:3]
     except Exception as e:
         return {"error": str(e)}
 
