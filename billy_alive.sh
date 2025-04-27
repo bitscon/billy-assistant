@@ -1,64 +1,65 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-LOCAL_DIR=~/Projects/billy-assistant
-REMOTE_HOST=ai
-SSH="ssh $REMOTE_HOST"
+# === 🚀 Billy Alive Script ===
+echo "=== 🚀 Billy Alive Script ==="
+echo "\U0001F4C2 At: $(pwd)"
 
-echo "📂 At: $LOCAL_DIR"
-echo "📝 Enter your commit message:"
-read -r MSG
+# Ask for commit message
+echo "\U0001F4DD Enter your commit message:"
+read commit_msg
 
-# 1) Commit & push to GitHub
-git -C "$LOCAL_DIR" add .
-git -C "$LOCAL_DIR" commit -m "$MSG"
-git -C "$LOCAL_DIR" push origin main
+# Git push
+if [ -n "$commit_msg" ]; then
+  git add .
+  git commit -m "$commit_msg"
+fi
+git push
+
 echo "✅ Code pushed to GitHub."
 
-# 2) SSH -> pull & redeploy
-echo "🔒 SSH into $REMOTE_HOST and redeploying..."
-$SSH bash << "EOSSH"
-  set -euo pipefail
+# SSH into AI server and deploy
+ssh ai << 'EOSSH'
+  set -e
   cd ~/billy-assistant
-  git fetch origin
+
+  echo "\U0001F4C2 Pulling latest code..."
   git reset --hard origin/main
+  git pull origin main
 
-  echo "🐳 Pulling & starting new image..."
-  docker-compose pull assistant
-  docker-compose up -d --force-recreate --no-deps assistant
-
-  # wait for healthy
-  echo "⏳ Waiting for assistant to come up..."
-  for i in {1..10}; do
-    if curl -s http://localhost:5000/ >/dev/null; then
-      echo "✅ Assistant is up!"
-      exit 0
-    fi
-    sleep 2
-  done
-  echo "❌ Assistant failed to start in time." >&2
-  exit 1
+  echo "\U0001F680 Rebuilding Docker image..."
+  docker build -t localhost:5000/billy-assistant:latest .
+  docker push localhost:5000/billy-assistant:latest
 EOSSH
 
-# 3) Verify endpoints (with retries)
-echo "🔍 Verifying assistant endpoints..."
-function test_ep {
-  local url=$1
-  local expect=$2
-  if curl -s --retry 3 --retry-delay 2 "$url" | grep -q "$expect"; then
-    echo "- $url ... OK"
+echo "✅ AI server done. You can update Portainer now!"
+echo "\U0001F4E6 Please update the stack(s) in Portainer manually to complete deployment!"
+
+# === Endpoint Checks ===
+echo "\U0001F50D Verifying assistant endpoints..."
+
+check_endpoint() {
+  url=$1
+  method=${2:-GET}
+  data=${3:-}
+
+  if [ "$method" == "POST" ]; then
+    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$url" -H "Content-Type: application/json" -d "$data")
   else
-    echo "- $url ... ❌ Unexpected response"
+    code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+  fi
+
+  if echo "$code" | grep -q "200"; then
+    echo "- Checking $url... OK"
+  else
+    echo "- Checking $url... ❌ Unexpected response ($code)"
   fi
 }
 
-test_ep "http://$REMOTE_HOST:5001/" "Good day"
-test_ep "http://$REMOTE_HOST:5001/ask" "{\"error\":\"No question provided\""
-test_ep "http://$REMOTE_HOST:5001/search" "{\"error\":\"No query provided\""
-test_ep "http://$REMOTE_HOST:5001/summarize" "{\"error\":\"No query provided\""
-test_ep "http://$REMOTE_HOST:5001/admin/status" "\"status\":\"running\""
-test_ep "http://$REMOTE_HOST:5001/profile/role" "\"role\":"
+check_endpoint "http://ai:5001/"
+check_endpoint "http://ai:5001/memory/save" POST '{"text":"ping memory"}'
+check_endpoint "http://ai:5001/memory/search" POST '{"query":"ping"}'
 
-echo ""
-echo "🎉 Billy is ALIVE and operational!"
-echo "📦 If you prefer Portainer, open it now and click 'Update Stack' on billy-assistant."
+
+# === Done ===
+echo "\n\U0001F389 All steps done. Billy is ALIVE and operational!"
+echo "\U0001F4E6 Remember to update Portainer to finish deployment."
