@@ -1,18 +1,18 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  billy_assistant:
+  assistant:
     image: localhost:5000/billy-assistant:latest
     container_name: billy_assistant
+    restart: unless-stopped
+    environment:
+      PROFILE_PATH: data/user_profile.json
+      QDRANT_URL: "http://qdrant:6333"
+      OLLAMA_URL: "http://ollama:11434/api/generate"
     ports:
       - "5001:5000"
-    environment:
-      - PROFILE_PATH=/app/data/user_profile.json
-      - OLLAMA_URL=http://ollama:11434/api/generate
-      - QDRANT_URL=http://qdrant:6333
     volumes:
       - ./data:/app/data
-    restart: unless-stopped
     networks:
       - billy-network
 
