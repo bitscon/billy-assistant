@@ -8,27 +8,9 @@ app = Flask(__name__)
 qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
 
 def embed_text(text):
-    # Placeholder embedder: random vector
     return [random.random() for _ in range(64)]
 
-def ensure_collection():
-    try:
-        res = requests.get(f"{qdrant_url}/collections/billy_memories")
-        if res.status_code != 200:
-            payload = {
-                "vectors": {
-                    "size": 64,
-                    "distance": "Cosine"
-                }
-            }
-            create = requests.put(f"{qdrant_url}/collections/billy_memories", json=payload)
-            return create.ok
-        return True
-    except Exception as e:
-        return False
-
 def save_memory(text):
-    ensure_collection()
     vector = embed_text(text)
     payload = {"text": text}
     doc = {
@@ -40,10 +22,12 @@ def save_memory(text):
     return res.ok
 
 def search_memory(query):
-    ensure_collection()
     try:
         res = requests.post(f"{qdrant_url}/collections/billy_memories/points/scroll", json={"limit": 50})
-        memories = res.json().get("result", [])
+        data = res.json()
+        if not isinstance(data, dict):
+            return {"error": "Invalid response from Qdrant"}
+        memories = data.get("result", [])
         matches = []
         for memory in memories:
             if query.lower() in memory.get("payload", {}).get("text", "").lower():
