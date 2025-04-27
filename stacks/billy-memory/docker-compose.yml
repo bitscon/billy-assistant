@@ -9,6 +9,12 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
+    networks:
+      - billy-network
 
 volumes:
   qdrant_storage:
+
+networks:
+  billy-network:
+    external: true
