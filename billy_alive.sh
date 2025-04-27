@@ -25,7 +25,7 @@ $SSH bash << "EOSSH"
 
   echo "🐳 Pulling & starting new image..."
   docker-compose pull assistant
-  docker-compose up -d assistant
+  docker-compose up -d --force-recreate --no-deps assistant
 
   # wait for healthy
   echo "⏳ Waiting for assistant to come up..."
