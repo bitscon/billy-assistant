@@ -1,20 +1,30 @@
 #!/bin/bash
+set -e
 
-echo "🧠 Testing Billy's Memory System..."
+echo "🧠 Testing Billy's Memory System (Upgraded)..."
 
-# Save memory
-echo "Saving a memory..."
+# 1. Save a memory
+echo "Saving memory #1..."
 curl -s -X POST http://ai:5001/memory/save \
   -H "Content-Type: application/json" \
-  -d '{"text":"Billy is an amazing assistant"}'
-echo
-sleep 1
+  -d '{"text":"Billy is an extremely smart assistant who loves to help Chad."}' | jq
 
-# Search memory
-echo "Searching for memory..."
+# 2. Save another memory
+echo "Saving memory #2..."
+curl -s -X POST http://ai:5001/memory/save \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Billy enjoys researching new AI tools and helping with IT consulting."}' | jq
+
+# 3. Search for keyword 'consulting'
+echo "Searching for 'consulting'..."
 curl -s -X POST http://ai:5001/memory/search \
   -H "Content-Type: application/json" \
-  -d '{"query":"amazing"}'
-echo
+  -d '{"query":"consulting"}' | jq
 
-echo "✅ Memory test completed!"
+# 4. Search for keyword 'Chad'
+echo "Searching for 'Chad'..."
+curl -s -X POST http://ai:5001/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"Chad"}' | jq
+
+echo "✅ Memory test (upgrade) completed!"
