@@ -1,3 +1,4 @@
 Flask
 requests
-qdrant-client
+sentence-transformers==2.2.2
+numpy
