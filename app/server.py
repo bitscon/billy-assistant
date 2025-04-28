@@ -21,7 +21,7 @@ def ensure_collection():
                     "distance": "Cosine"
                 }
             }
-            create = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 768})
+            create = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json=schema)
             return create.ok
         return True
     except Exception as e:
