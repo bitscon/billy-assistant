@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings")
+ollama_url = os.getenv("OLLAMA_URL", "http://192.168.1.112:11434/api/embeddings")
 collection_name = "billy_memories"
 
 def ensure_collection():
