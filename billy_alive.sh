@@ -20,7 +20,7 @@ echo "✅ Code pushed to GitHub."
 # SSH into AI server and deploy
 ssh ai << 'EOSSH'
   set -e
-  cd ~/billy-assistant
+  cd ~/Projects/billy-assistant
 
   echo "\U0001F4C2 Pulling latest code..."
   git reset --hard origin/main
