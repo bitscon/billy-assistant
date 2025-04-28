@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       QDRANT_URL: "http://qdrant:6333"
-      OLLAMA_URL: "http://ollama:11434"
+      OLLAMA_URL: "http://192.18.1.112:11434"
       USER_PASSWORD: "secure-password-123"
       JWT_SECRET_KEY: "your-secure-key-32-chars-long"
     ports:

@@ -16,7 +16,7 @@ jwt = JWTManager(app)
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
 
 qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
+ollama_url = os.getenv("OLLAMA_URL", "http://192.168.1.112:11434")
 collection_name = os.getenv("COLLECTION_NAME", "billy_memories")
 embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 chat_model = os.getenv("CHAT_MODEL", "llama3")
