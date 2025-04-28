@@ -5,58 +5,48 @@ import requests
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
-COLLECTION_NAME = "billy_memories"
-
-def ensure_collection():
-    """Create the collection if it doesn't exist yet"""
-    res = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
-    if res.status_code == 404:
-        schema = {
-            "vectors": {
-                "size": 64,
-                "distance": "Cosine"
-            }
-        }
-        create = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 64})
-        return create.ok
-    return True
+qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
+ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings")
 
 def embed_text(text):
-    """Temporary embedder: Random vector"""
-    return [random.random() for _ in range(64)]
+    try:
+        res = requests.post(ollama_url, json={"model": "nomic-embed-text", "prompt": text})
+        res.raise_for_status()
+        embedding = res.json()["embedding"]
+        return embedding
+    except Exception as e:
+        print(f"Embedding error: {e}")
+        return None
 
 def save_memory(text):
-    ensure_collection()
     vector = embed_text(text)
+    if vector is None:
+        print("❌ Failed to get embedding.")
+        return False
     payload = {"text": text}
     doc = {
         "vector": vector,
         "payload": payload,
         "id": int(time.time() * 1000)
     }
-    res = requests.put(
-        f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points",
-        json={"points": [doc]}
-    )
-    return res.ok
+    try:
+        res = requests.put(f"{qdrant_url}/collections/billy_memories/points", json={"points": [doc]})
+        res.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"Save memory error: {e}")
+        return False
 
 def search_memory(query):
-    """Search by text match + return top results"""
     try:
-        ensure_collection()
-        res = requests.post(
-            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
-            json={"limit": 50}
-        )
-        points = res.json().get("result", [])
+        res = requests.post(f"{qdrant_url}/collections/billy_memories/points/scroll", json={"limit": 50})
+        res.raise_for_status()
+        memories = res.json().get("result", [])
         matches = []
-        for point in points:
-            text = point.get("payload", {}).get("text", "")
-            if query.lower() in text.lower():
-                matches.append(text)
-        return matches[:3]
+        for memory in memories:
+            if query.lower() in memory.get("payload", {}).get("text", "").lower():
+                matches.append(memory.get("payload", {}))
+        return matches
     except Exception as e:
         return {"error": str(e)}
 
