@@ -13,7 +13,7 @@ COLLECTION_NAME = "billy_memories"
 def ensure_collection():
     """Make sure the memory collection exists."""
     try:
-        res = requests.get(f"{qdrant_url}/collections/{collection_name}")
+        res = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
         if res.status_code == 404:
             schema = {
                 "vectors": {
@@ -21,17 +21,17 @@ def ensure_collection():
                     "distance": "Cosine"
                 }
             }
-            create = requests.put(f"{qdrant_url}/collections/{collection_name}", json={"vector_size": 768})
+            create = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 768})
             return create.ok
         return True
     except Exception as e:
-        print(f"Collection check error: {e}")
+        print(f"[Error] Collection check error: {e}")
         return False
 
 def save_memory(text):
     try:
         # 1. Embed the text
-        embed_res = requests.post(ollama_url, json={"model": "nomic-embed-text", "prompt": text})
+        embed_res = requests.post(OLLAMA_URL, json={"model": "nomic-embed-text", "prompt": text})
         embed_res.raise_for_status()
         embedding = embed_res.json()["embedding"]
 
@@ -50,15 +50,15 @@ def save_memory(text):
 
         # 3. Ensure collection exists
         if not ensure_collection():
-            print("❌ Failed to ensure collection.")
+            print("[Error] ❌ Failed to ensure collection.")
             return False
 
         # 4. Save memory to Qdrant
-        save_res = requests.put(f"{qdrant_url}/collections/{collection_name}/points", json=payload)
+        save_res = requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points", json=payload)
         save_res.raise_for_status()
         return True
     except Exception as e:
-        print(f"Save memory error: {e}")
+        print(f"[Error] Save memory error: {e}")
         return False
 
 def search_memory(query):
@@ -66,14 +66,12 @@ def search_memory(query):
     try:
         ensure_collection()
         res = requests.post(
-            f"{qdrant_url}/collections/{collection_name}/points/scroll",
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
             json={"limit": 50}
         )
+        res.raise_for_status()
         data = res.json()
-        if isinstance(data, dict):
-            points = data.get("result", [])
-        else:
-            points = []
+        points = data.get("result", [])
 
         matches = []
         for point in points:
@@ -82,6 +80,7 @@ def search_memory(query):
                 matches.append(text)
         return matches[:3]
     except Exception as e:
+        print(f"[Error] Search memory error: {e}")
         return {"error": str(e)}
 
 @app.route("/", methods=["GET"])
