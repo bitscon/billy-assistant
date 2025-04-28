@@ -1,26 +1,48 @@
-# 🧠 Billy Assistant
+Billy Assistant
+A Flask-based AI assistant that stores memories in Qdrant and uses Ollama for embeddings and chat. Designed to integrate with an iOS app.
+Setup
 
-Billy is a personal assistant server, self-hosted with Docker, Flask, DuckDuckGo search, and Qdrant memory storage.
+Prerequisites:
 
----
-## 🚀 Quick Commands
+Docker and Docker Compose installed.
+A machine with IP 192.168.1.112 for hosting.
 
-| Action | Command |
-|:------:|:-------:|
-| Push code to production + verify | `./billy_alive.sh` |
-| End of day push + notes | `./end_of_day.sh` |
 
----
-## 📚 Documentation
+Clone Repository:
+git clone https://github.com/bitscon/billy-assistant.git
+cd billy-assistant
 
-- [Memory System](docs/memory.md)
-- [Architecture Overview](docs/architecture.md)
-- [Deployment Guide](docs/deployment.md)
 
----
-## 🛠️ Stacks
+Create Docker Network:
+docker network create billy-network
 
-| Stack | Purpose |
-|:-----:|:-------:|
-| `billy-assistant` | Core Assistant API and Logic |
-| `billy-memory`    | Vector DB (Qdrant) for Memory Storage |
+
+Build and Run:
+docker build -t localhost:5000/billy-assistant:latest .
+docker-compose up -d
+
+
+Test API:
+curl -X POST http://192.168.1.112:5001/api/token -H "Content-Type: application/json" -d '{"username":"chad","password":"secure-password-123"}'
+
+
+
+iOS Integration
+
+Use http://192.168.1.112:5001 for API calls.
+Add ATS exception in Info.plist for local testing:<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+</dict>
+
+
+Deploy with HTTPS in production.
+
+Endpoints
+
+POST /api/token: Get JWT token.
+POST /api/memory/save: Save a memory.
+POST /api/memory/search: Search memories.
+POST /api/chat: Chat with Billy.
+

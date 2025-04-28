@@ -6,13 +6,28 @@ services:
     container_name: billy_assistant
     restart: unless-stopped
     environment:
-      PROFILE_PATH: data/user_profile.json
       QDRANT_URL: "http://qdrant:6333"
-      OLLAMA_URL: "http://192.168.1.112:11434/api/embeddings"
+      OLLAMA_URL: "http://ollama:11434"
+      USER_PASSWORD: "secure-password-123"
+      JWT_SECRET_KEY: "your-secure-key-32-chars-long"
     ports:
       - "5001:5000"
     volumes:
       - ./data:/app/data
+    networks:
+      - billy-network
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    networks:
+      - billy-network
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
     networks:
       - billy-network
 
