@@ -6,58 +6,66 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
-COLLECTION_NAME = "billy_memories"
+qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
+ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings")
+collection_name = "billy_memories"
 
 def ensure_collection():
-    res = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
-    if res.status_code == 404:
-        requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 768})
-    return True
-
-def embed_text(text):
+    """Make sure the memory collection exists."""
     try:
-        res = requests.post(
-            os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings"),
-            json={"model": "nomic-embed-text", "prompt": text}
-        )
-        res.raise_for_status()
-        return res.json()["embedding"]
+        res = requests.get(f"{qdrant_url}/collections/{collection_name}")
+        if res.status_code == 404:
+            schema = {
+                "vectors": {
+                    "size": 768,
+                    "distance": "Cosine"
+                }
+            }
+            create = requests.put(f"{qdrant_url}/collections/{collection_name}", json={"vector_size": 768})
+            return create.ok
+        return True
     except Exception as e:
-        print(f"❌ Embedding error: {e}")
-        return None
+        print(f"Collection check error: {e}")
+        return False
 
 def save_memory(text):
-    ensure_collection()
-    vector = embed_text(text)
-    if not vector:
-        print("❌ Embedding failed or empty.")
-        return False
-    payload = {"text": text}
-    doc = {
-        "id": int(time.time() * 1000),
-        "vector": vector,
-        "payload": payload
-    }
     try:
-        res = requests.put(
-            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points",
-            json={"points": [doc]}
-        )
-        res.raise_for_status()
+        # 1. Embed the text
+        embed_res = requests.post(ollama_url, json={"model": "nomic-embed-text", "prompt": text})
+        embed_res.raise_for_status()
+        embedding = embed_res.json()["embedding"]
+
+        # 2. Build payload
+        payload = {
+            "points": [
+                {
+                    "id": int(time.time() * 1000),
+                    "vector": embedding,
+                    "payload": {
+                        "text": text
+                    }
+                }
+            ]
+        }
+
+        # 3. Ensure collection exists
+        if not ensure_collection():
+            print("❌ Failed to ensure collection.")
+            return False
+
+        # 4. Save memory to Qdrant
+        save_res = requests.put(f"{qdrant_url}/collections/{collection_name}/points", json=payload)
+        save_res.raise_for_status()
         return True
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Error saving to Qdrant: {e}")
-        print(f"Response content: {res.content}")
+    except Exception as e:
+        print(f"Save memory error: {e}")
         return False
 
 def search_memory(query):
+    """Simple scroll and search text match."""
     try:
-        ensure_collection()
-        res = requests.post(
-            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
-            json={"limit": 50}
-        )
+        res = requests.post(f"{qdrant_url}/collections/{collection_name}/points/scroll", json={"limit": 50})
+        res.raise_for_status()
         points = res.json().get("result", [])
         matches = []
         for point in points:
