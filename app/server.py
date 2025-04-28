@@ -6,9 +6,9 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-ollama_url = os.getenv("OLLAMA_URL", "http://192.168.1.112:11434/api/embeddings")
-collection_name = "billy_memories"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.1.112:11434/api/embeddings")
+COLLECTION_NAME = "billy_memories"
 
 def ensure_collection():
     """Make sure the memory collection exists."""
@@ -66,7 +66,7 @@ def search_memory(query):
     try:
         ensure_collection()
         res = requests.post(
-            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
+            f"{qdrant_url}/collections/{collection_name}/points/scroll",
             json={"limit": 50}
         )
         data = res.json()
