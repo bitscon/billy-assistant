@@ -1,4 +1,8 @@
-Flask
+flask
 requests
 sentence-transformers==2.2.2
 numpy
+flask-cors
+flask-jwt-extended
+flask-limiter
+requests

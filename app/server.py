@@ -5,26 +5,30 @@ from typing import Dict, List, Union
 import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY") or str(uuid.uuid4())  # Random for dev, set in prod
+
+# Configurations
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "your-secret-key")  # Change in production
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Restrict origins in production
 jwt = JWTManager(app)
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
 
-qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
+qdrant_url = os.getenv("QDRANT_URL") or "http://qdrant:6333"
+ollama_url = os.getenv("OLLAMA_URL") or "http://ollama:11434"
 collection_name = os.getenv("COLLECTION_NAME", "billy_memories")
 embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 chat_model = os.getenv("CHAT_MODEL", "llama3")
 vector_size = int(os.getenv("VECTOR_SIZE", 768))
 
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Memory Management
 def ensure_collection() -> bool:
     """
     Ensure Qdrant collection exists.
@@ -35,17 +39,22 @@ def ensure_collection() -> bool:
     try:
         res = requests.get(f"{qdrant_url}/collections/{collection_name}")
         if res.status_code == 404:
-            schema = {"vectors": {"size": vector_size, "distance": "Cosine"}}
+            schema = {
+                "vectors": {
+                    "size": vector_size,
+                    "distance": "Cosine"
+                }
+            }
             create = requests.put(f"{qdrant_url}/collections/{collection_name}", json=schema)
             if not create.ok:
-                logger.error(f"Collection creation failed: {create.text} (status: {create.status_code})")
+                logger.error(f"Failed to create collection: {create.text}")
                 return False
         elif not res.ok:
-            logger.error(f"Collection check failed: {res.text} (status: {res.status_code})")
+            logger.error(f"Collection check failed: {res.text}")
             return False
         return True
     except requests.RequestException as e:
-        logger.error(f"Collection error: {e} (status: {res.status_code if 'res' in locals() else 'N/A'})")
+        logger.error(f"Collection check error: {e}")
         return False
 
 def embed_text(text: str) -> Union[List[float], None]:
@@ -84,24 +93,32 @@ def save_memory(text: str) -> bool:
     Returns:
         bool: True if saved successfully, False otherwise.
     """
-    if not isinstance(text, str) or len(text) > 1000:
-        logger.error("Invalid text input")
-        return False
-    vector = embed_text(text)
-    if vector is None:
-        logger.error("Failed to generate embedding for text")
-        return False
-    doc = {"points": [{"id": str(uuid.uuid4()), "vector": vector, "payload": {"text": text}}]}
     try:
+        if not isinstance(text, str) or len(text) > 1000:
+            logger.error("Invalid text input")
+            return False
+        embedding = embed_text(text)
+        if embedding is None:
+            logger.error("Failed to generate embedding")
+            return False
+        payload = {
+            "points": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "vector": embedding,
+                    "payload": {"text": text}
+                }
+            ]
+        }
         res = requests.put(
             f"{qdrant_url}/collections/{collection_name}/points",
-            json=doc,
+            json=payload,
             timeout=10
         )
         res.raise_for_status()
         return True
     except requests.RequestException as e:
-        logger.error(f"Save error: {e}")
+        logger.error(f"Save memory error: {e}")
         return False
 
 def search_memory(query: str, limit: int = 5) -> Union[List[str], Dict[str, str]]:
@@ -116,62 +133,47 @@ def search_memory(query: str, limit: int = 5) -> Union[List[str], Dict[str, str]
         Union[List[str], Dict[str, str]]: List of matching memory texts, or error dict if failed.
     """
     try:
-        vector = embed_text(query)
-        if vector is None:
-            return {"error": "Failed to generate embedding"}
+        embedding = embed_text(query)
+        if embedding is None:
+            return {"error": "Failed to generate query embedding"}
         res = requests.post(
             f"{qdrant_url}/collections/{collection_name}/points/search",
-            json={"vector": vector, "limit": limit, "with_payload": True},
+            json={"vector": embedding, "limit": limit, "with_payload": True},
             timeout=10
         )
         res.raise_for_status()
-        return [p["payload"]["text"] for p in res.json().get("result", []) if "payload" in p and "text" in p["payload"]]
+        points = res.json().get("result", [])
+        matches = [point["payload"]["text"] for point in points if "payload" in point and "text" in point["payload"]]
+        return matches
     except requests.RequestException as e:
         logger.error(f"Search error: {e}")
-        return {"error": str(e)}
+        return {"error": f"Search failed: {str(e)}"}
 
-def error_response(message: str, status: int) -> tuple:
+# Error Response Helper
+def error_response(message: str, status_code: int) -> tuple:
     """
     Create a standardized error response.
     
     Args:
         message: The error message.
-        status: HTTP status code.
+        status_code: HTTP status code.
     
     Returns:
         tuple: JSON response and status code.
     """
-    return jsonify({"error": message}), status
+    return jsonify({"error": message}), status_code
 
+# Routes
 @app.before_first_request
 def initialize():
     """Initialize the Qdrant collection before the first request."""
     if not ensure_collection():
-        raise RuntimeError("Failed to initialize Qdrant")
+        raise RuntimeError("Failed to initialize Qdrant collection")
 
 @app.route("/", methods=["GET"])
 def home() -> str:
     """Root endpoint for basic greeting."""
-    return "Good day, Chad. Billy is online."
-
-@app.route("/api/token", methods=["POST"])
-@limiter.limit("5 per minute")
-def get_token() -> tuple:
-    """
-    Generate a JWT token after validating credentials.
-    
-    Expects JSON: {"username": str, "password": str}
-    
-    Returns:
-        tuple: JSON response with token or error, and status code.
-    """
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-    if not username or not password or username != "chad" or password != os.getenv("USER_PASSWORD", "default-password"):
-        return error_response("Unauthorized", 401)
-    token = create_access_token(identity=username)
-    return jsonify({"access_token": token}), 200
+    return "Good day, Chad. How may I assist you?"
 
 @app.route("/api/memory/save", methods=["POST"])
 @jwt_required()
@@ -208,14 +210,14 @@ def api_search_memory() -> tuple:
     if not data or not isinstance(data.get("query"), str):
         return error_response("Missing or invalid query", 400)
     results = search_memory(data["query"])
-    if isinstance(results, dict):
-        return error_response(results.get("error", "Search failed"), 500)
+    if isinstance(results, dict) and "error" in results:
+        return error_response(results["error"], 500)
     return jsonify({"results": results}), 200
 
 @app.route("/api/chat", methods=["POST"])
 @jwt_required()
 @limiter.limit("20 per minute")
-def api_chat() -> tuple:
+def chat() -> tuple:
     """
     Chat with Billy: search memory and generate response.
     
@@ -227,39 +229,50 @@ def api_chat() -> tuple:
     data = request.json
     if not data or not isinstance(data.get("prompt"), str):
         return error_response("Missing or invalid prompt", 400)
-    prompt = data["prompt"]
-    memories = search_memory(prompt)
-    if isinstance(memories, dict):
-        return error_response(memories.get("error", "Search failed"), 500)
-    memory_context = "\n".join(memories) if memories else "No relevant memories found."
-    user_prompt = f"""You are Billy, Chad's AI Assistant.
-Relevant memories:\n{memory_context}\n
-User: {prompt}
-"""
+    
     try:
+        # Search memory
+        memories = search_memory(data["prompt"])
+        if isinstance(memories, dict) and "error" in memories:
+            return error_response(memories["error"], 500)
+        memory_context = "\n".join(memories) if memories else "No relevant memories found."
+
+        # Build prompt
+        final_prompt = f"""You are Billy, Chad's AI Assistant.
+Use the following memories if relevant:
+
+{memory_context}
+
+Answer Chad's question:
+{data["prompt"]}
+"""
+
+        # Call Ollama
         res = requests.post(
             f"{ollama_url}/api/chat",
             json={
                 "model": chat_model,
                 "messages": [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "system", "content": "You are a helpful personal assistant named Billy."},
+                    {"role": "user", "content": final_prompt}
                 ]
             },
             timeout=30
         )
         res.raise_for_status()
-        data = res.json()
-        if "message" not in data or "content" not in data["message"]:
-            logger.error("Invalid Ollama response")
-            return error_response("Invalid chat response", 500)
-        reply = data["message"]["content"]
-        save_memory(f"User: {prompt}")
+        response = res.json()
+        if "message" not in response or "content" not in response["message"]:
+            return error_response("Invalid Ollama response", 500)
+        reply = response["message"]["content"]
+
+        # Save conversation
+        save_memory(f"User: {data['prompt']}")
         save_memory(f"Billy: {reply}")
+
         return jsonify({"response": reply}), 200
     except requests.RequestException as e:
         logger.error(f"Chat error: {e}")
-        return error_response("Chat failed", 500)
+        return error_response("Chat processing failed", 500)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
