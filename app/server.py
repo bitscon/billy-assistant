@@ -65,22 +65,27 @@ def search_memory(query):
     """Search Billy's memories for matching text."""
     try:
         ensure_collection()
+
         res = requests.post(
             f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
             json={"limit": 50}
         )
         res.raise_for_status()
-        data = res.json()
-        points = data.get("result", [])
 
+        data = res.json()
+        if "result" not in data:
+            return {"error": "Invalid response from Qdrant."}
+
+        points = data["result"]
         matches = []
+
         for point in points:
             text = point.get("payload", {}).get("text", "")
             if query.lower() in text.lower():
                 matches.append(text)
+
         return matches[:3]
     except Exception as e:
-        print(f"[Error] Search memory error: {e}")
         return {"error": str(e)}
 
 @app.route("/", methods=["GET"])
