@@ -1,42 +1,68 @@
 import os
 import time
 import requests
-import numpy as np
 from flask import Flask, request, jsonify
-from sentence_transformers import SentenceTransformer
 
 app = Flask(__name__)
 qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-
-# 🧠 Load real embedding model
-embedder = SentenceTransformer('all-MiniLM-L6-v2')
+ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 def embed_text(text):
-    # Use real sentence embeddings
-    return embedder.encode(text).tolist()
+    """Use Ollama to embed text properly."""
+    try:
+        payload = {
+            "model": embedding_model,
+            "prompt": text
+        }
+        response = requests.post(f"{ollama_url}/api/embeddings", json=payload)
+        response.raise_for_status()
+        return response.json()["embedding"]
+    except Exception as e:
+        print(f"Embedding error: {e}")
+        return None
 
 def save_memory(text):
     vector = embed_text(text)
-    payload = {"text": text}
+    if vector is None:
+        return False
+
     doc = {
         "vector": vector,
-        "payload": payload,
-        "id": int(time.time() * 1000)
+        "payload": {"text": text},
+        "id": str(int(time.time() * 1000))
     }
-    res = requests.put(f"{qdrant_url}/collections/billy_memories/points", json={"points": [doc]})
-    return res.ok
-
-def search_memory(query, top_k=5):
     try:
-        query_vector = embed_text(query)
-        res = requests.post(f"{qdrant_url}/collections/billy_memories/points/search", json={
-            "vector": query_vector,
-            "limit": top_k
-        })
-        matches = res.json().get("result", [])
-        return [match.get("payload", {}) for match in matches]
+        response = requests.put(
+            f"{qdrant_url}/collections/billy_memories/points",
+            json={"points": [doc]}
+        )
+        response.raise_for_status()
+        return True
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Save memory error: {e}")
+        return False
+
+def search_memory(query):
+    """Perform a vector similarity search."""
+    vector = embed_text(query)
+    if vector is None:
+        return []
+
+    try:
+        response = requests.post(
+            f"{qdrant_url}/collections/billy_memories/points/search",
+            json={
+                "vector": vector,
+                "limit": 5
+            }
+        )
+        response.raise_for_status()
+        results = response.json().get("result", [])
+        return [item.get("payload", {}) for item in results]
+    except Exception as e:
+        print(f"Search error: {e}")
+        return []
 
 @app.route("/", methods=["GET"])
 def home():

@@ -1,33 +1,37 @@
 #!/bin/bash
-# Test Billy's memory system with real embeddings
 
 echo "🧠 Testing Billy's Memory System..."
 
-# Function to POST a memory
-save_memory() {
-  echo "💾 Saving memory: $1"
-  curl -s -X POST http://ai:5001/memory/save \
-    -H "Content-Type: application/json" \
-    -d "{\"text\":\"$1\"}"
-  echo ""
-}
-
-# Function to search a memory
-search_memory() {
-  echo "🔎 Searching for: $1"
-  curl -s -X POST http://ai:5001/memory/search \
-    -H "Content-Type: application/json" \
-    -d "{\"query\":\"$1\"}"
-  echo ""
-}
+# Memories to save
+memories=(
+  "Billy loves helping Chad with IT consulting."
+  "Billy enjoys researching new AI tools."
+)
 
 # Save memories
-save_memory "Billy loves helping Chad with IT consulting."
-save_memory "Billy enjoys researching new AI tools."
+for memory in "${memories[@]}"; do
+  echo "💾 Saving memory: $memory"
+  curl -s -X POST http://ai:5001/memory/save \
+    -H "Content-Type: application/json" \
+    -d "{\"text\":\"$memory\"}"
+  echo ""
+done
 
-# Search
-search_memory "consulting"
-search_memory "AI tools"
+# Queries to search
+queries=(
+  "consulting"
+  "AI tools"
+)
 
-echo ""
+# Search memories
+for query in "${queries[@]}"; do
+  echo "🔎 Searching for: $query"
+  result=$(curl -s -X POST http://ai:5001/memory/search \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"$query\"}")
+  
+  echo "🔍 Result: $result"
+  echo ""
+done
+
 echo "✅ Memory test completed!"
