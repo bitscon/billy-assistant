@@ -62,11 +62,19 @@ def save_memory(text):
         return False
 
 def search_memory(query):
-    """Simple scroll and search text match."""
+    """Search Billy's memories for matching text."""
     try:
-        res = requests.post(f"{qdrant_url}/collections/{collection_name}/points/scroll", json={"limit": 50})
-        res.raise_for_status()
-        points = res.json().get("result", [])
+        ensure_collection()
+        res = requests.post(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
+            json={"limit": 50}
+        )
+        data = res.json()
+        if isinstance(data, dict):
+            points = data.get("result", [])
+        else:
+            points = []
+
         matches = []
         for point in points:
             text = point.get("payload", {}).get("text", "")
