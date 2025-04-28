@@ -5,48 +5,66 @@ import requests
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings")
+
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+COLLECTION_NAME = "billy_memories"
+
+def ensure_collection():
+    res = requests.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
+    if res.status_code == 404:
+        requests.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json={"vector_size": 768})
+    return True
 
 def embed_text(text):
     try:
-        res = requests.post(ollama_url, json={"model": "nomic-embed-text", "prompt": text})
+        res = requests.post(
+            os.getenv("OLLAMA_URL", "http://localhost:11434/api/embeddings"),
+            json={"model": "nomic-embed-text", "prompt": text}
+        )
         res.raise_for_status()
-        embedding = res.json()["embedding"]
-        return embedding
+        return res.json()["embedding"]
     except Exception as e:
-        print(f"Embedding error: {e}")
+        print(f"❌ Embedding error: {e}")
         return None
 
 def save_memory(text):
+    ensure_collection()
     vector = embed_text(text)
-    if vector is None:
-        print("❌ Failed to get embedding.")
+    if not vector:
+        print("❌ Embedding failed or empty.")
         return False
     payload = {"text": text}
     doc = {
+        "id": int(time.time() * 1000),
         "vector": vector,
-        "payload": payload,
-        "id": int(time.time() * 1000)
+        "payload": payload
     }
     try:
-        res = requests.put(f"{qdrant_url}/collections/billy_memories/points", json={"points": [doc]})
+        res = requests.put(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points",
+            json={"points": [doc]}
+        )
         res.raise_for_status()
         return True
-    except Exception as e:
-        print(f"Save memory error: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error saving to Qdrant: {e}")
+        print(f"Response content: {res.content}")
         return False
 
 def search_memory(query):
     try:
-        res = requests.post(f"{qdrant_url}/collections/billy_memories/points/scroll", json={"limit": 50})
-        res.raise_for_status()
-        memories = res.json().get("result", [])
+        ensure_collection()
+        res = requests.post(
+            f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/scroll",
+            json={"limit": 50}
+        )
+        points = res.json().get("result", [])
         matches = []
-        for memory in memories:
-            if query.lower() in memory.get("payload", {}).get("text", "").lower():
-                matches.append(memory.get("payload", {}))
-        return matches
+        for point in points:
+            text = point.get("payload", {}).get("text", "")
+            if query.lower() in text.lower():
+                matches.append(text)
+        return matches[:3]
     except Exception as e:
         return {"error": str(e)}
 
