@@ -25,6 +25,9 @@ vector_size = int(os.getenv("VECTOR_SIZE", 768))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Track initialization
+initialized = False
+
 def ensure_collection() -> bool:
     try:
         res = requests.get(f"{qdrant_url}/collections/{collection_name}")
@@ -99,10 +102,13 @@ def search_memory(query: str, limit: int = 5) -> Union[List[str], Dict[str, str]
 def error_response(message: str, status: int) -> tuple:
     return jsonify({"error": message}), status
 
-@app.before_first_request
+@app.before_request
 def initialize():
-    if not ensure_collection():
-        raise RuntimeError("Failed to initialize Qdrant")
+    global initialized
+    if not initialized:
+        if not ensure_collection():
+            raise RuntimeError("Failed to initialize Qdrant")
+        initialized = True
 
 @app.route("/", methods=["GET"])
 def home() -> str:
